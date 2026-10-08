@@ -1009,7 +1009,7 @@ input[type="range"]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;b
     if ('inert' in dock) dock.inert = !show;
   }
   if ('IntersectionObserver' in window) {
-    new IntersectionObserver(entries => setDock(!entries[0].isIntersecting), { threshold: 0.15 }).observe($('#results'));
+    new IntersectionObserver(entries => setDock(entries[0].intersectionRatio < 0.15), { threshold: [0, 0.15] }).observe($('#results'));
   }
 
   let rzT = 0;
