@@ -1,0 +1,1030 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>IER Seminar Pizza Calculator</title>
+<meta name="description" content="Turns an IER seminar's RSVP count into a pizza order: how many Cheese, Pepperoni and Veggie to get.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 1.6 14.2 13.4H1.8Z' fill='%23E7A817'/%3E%3Crect x='1' y='12.4' width='14' height='2.6' rx='1.3' fill='%23C6955A'/%3E%3Ccircle cx='8' cy='7' r='1.4' fill='%23B8392A'/%3E%3Ccircle cx='6' cy='10.4' r='1.1' fill='%23B8392A'/%3E%3Ccircle cx='10.2' cy='10.4' r='1.1' fill='%23B8392A'/%3E%3C/svg%3E">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: a two-bay robot workshop. Left bay = control panel (RSVP, speaker, mix); right bay = dark output console where P1-ZZA stacks kraft pizza boxes; the rules sit on blueprint paper below. Phones stack to one column with a docked total. */
+:root{
+  --bg:#E8EEF4;
+  --grid:rgba(20,33,61,.065);
+  --panel:#FBFCFE;
+  --ink:#14213D;
+  --muted:#56637A;
+  --line:#D2DAE5;
+  --field:#EDF1F7;
+  --track:#D5DDE9;
+  --accent:#DC4A1F;
+  --accent-soft:rgba(220,74,31,.09);
+  --accent-ring:rgba(220,74,31,.45);
+  --on-accent:#FFFFFF;
+  --focus:#2F6FED;
+  --cheese:#E7A817;
+  --pep:#B8392A;
+  --veg:#3A9446;
+  --kraft:#C6955A;
+  --kraft-hi:#DDB47E;
+  --kraft-lo:#9C7038;
+  --console:#14213D;
+  --console-ink:#EEF3FA;
+  --console-muted:#A3B2C9;
+  --console-line:#2D3C5E;
+  --bubble:#F4F7FC;
+  --bubble-ink:#14213D;
+  --robot-body:#C9D6E5;
+  --robot-dark:#8EA0B8;
+  --robot-screen:#0A1222;
+  --robot-eye:#6FE3F6;
+  --robot-cheek:#FF8FA3;
+  --box-shadow:rgba(0,0,0,.28);
+  --shadow:0 1px 2px rgba(20,33,61,.06),0 10px 30px rgba(20,33,61,.08);
+  --dock-shadow:0 10px 30px rgba(20,33,61,.28);
+  --font-display:"Bungee","Arial Black","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --font-body:"Figtree",system-ui,-apple-system,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0C1320; --grid:rgba(140,170,215,.06); --panel:#141D2F; --ink:#E6ECF5; --muted:#97A5BC;
+    --line:#27344D; --field:#1B2640; --track:#2A3854;
+    --accent:#FF7A55; --accent-soft:rgba(255,122,85,.13); --accent-ring:rgba(255,122,85,.5); --on-accent:#2A0D05; --focus:#7AA5FF;
+    --cheese:#F2BC38; --pep:#E5604D; --veg:#5CBC68;
+    --kraft:#B88A52; --kraft-hi:#CFA672; --kraft-lo:#8A6131;
+    --console:#18233B; --console-ink:#EEF3FA; --console-muted:#A3B2C9; --console-line:#31415F;
+    --bubble:#EEF3FA; --bubble-ink:#14213D; --box-shadow:rgba(0,0,0,.4);
+    --shadow:0 1px 2px rgba(0,0,0,.35),0 10px 30px rgba(0,0,0,.3); --dock-shadow:0 10px 30px rgba(0,0,0,.5);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0C1320; --grid:rgba(140,170,215,.06); --panel:#141D2F; --ink:#E6ECF5; --muted:#97A5BC;
+  --line:#27344D; --field:#1B2640; --track:#2A3854;
+  --accent:#FF7A55; --accent-soft:rgba(255,122,85,.13); --accent-ring:rgba(255,122,85,.5); --on-accent:#2A0D05; --focus:#7AA5FF;
+  --cheese:#F2BC38; --pep:#E5604D; --veg:#5CBC68;
+  --kraft:#B88A52; --kraft-hi:#CFA672; --kraft-lo:#8A6131;
+  --console:#18233B; --console-ink:#EEF3FA; --console-muted:#A3B2C9; --console-line:#31415F;
+  --bubble:#EEF3FA; --bubble-ink:#14213D; --box-shadow:rgba(0,0,0,.4);
+  --shadow:0 1px 2px rgba(0,0,0,.35),0 10px 30px rgba(0,0,0,.3); --dock-shadow:0 10px 30px rgba(0,0,0,.5);
+  color-scheme:dark;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  background-color:var(--bg);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:28px 28px;
+  color:var(--ink);
+  font-family:var(--font-body);
+  font-size:16px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+button,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+.wrap{max-width:1160px;margin-inline:auto;padding-inline:clamp(16px,4vw,40px);padding-block:24px 56px}
+
+/* ---------- header ---------- */
+.top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-block:4px 26px}
+.brand{min-width:0}
+h1{font-family:var(--font-display);font-weight:400;font-size:clamp(28px,4.6vw,46px);line-height:1.04;margin:0 0 10px;text-wrap:balance}
+h1 .hl{color:var(--accent)}
+.tagline{margin:0;color:var(--muted);max-width:58ch;font-size:17px;text-wrap:pretty}
+
+/* ---------- grid ---------- */
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.08fr);grid-template-areas:"controls console" "rules console";gap:24px;align-items:start}
+
+/* ---------- control panel ---------- */
+.controls{grid-area:controls;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow)}
+.section{padding:20px 22px;display:grid;gap:12px;min-width:0}
+.section + .section{border-top:1px solid var(--line)}
+.lbl{font-weight:800;font-size:16px;margin:0}
+.hint{margin:0;color:var(--muted);font-size:14px;line-height:1.45}
+.row-head{display:flex;justify-content:space-between;align-items:baseline;gap:6px 12px;flex-wrap:wrap}
+.link-btn{border:0;background:none;color:var(--accent);font-weight:700;font-size:14px;cursor:pointer;padding:4px 2px;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1.5px}
+.link-row{display:flex;gap:14px}
+
+.stepper{display:inline-flex;align-items:center;gap:6px;background:var(--field);border-radius:14px;padding:4px;justify-self:start;vertical-align:middle}
+.stepper button{display:grid;place-items:center;width:38px;height:38px;border-radius:10px;border:0;background:var(--panel);color:var(--ink);font-weight:700;font-size:20px;line-height:1;cursor:pointer;box-shadow:0 1px 0 var(--line);touch-action:manipulation;transition:transform .12s}
+.stepper button:active{transform:scale(.92)}
+.stepper button[aria-disabled="true"]{opacity:.35;cursor:default}
+.stepper input{width:3.2em;border:0;background:transparent;text-align:center;font:600 16px/1 var(--font-mono);padding:8px 0;font-variant-numeric:tabular-nums;-moz-appearance:textfield;appearance:textfield}
+.stepper input::-webkit-outer-spin-button,.stepper input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.stepper input:focus{outline:none;background:var(--panel);border-radius:8px;box-shadow:inset 0 0 0 2px var(--focus)}
+.stepper.big{padding:6px;border-radius:18px;gap:8px}
+.stepper.big button{width:54px;height:54px;font-size:28px;border-radius:14px}
+.stepper.big input{font:400 44px/1 var(--font-display);width:3.4ch;padding:6px 0}
+.stepper.sm{padding:3px;gap:3px;border-radius:10px}
+.stepper.sm button{width:30px;height:30px;font-size:17px;border-radius:7px}
+.stepper.sm input{width:2.7em;padding:6px 0}
+.stepper.nudge{animation:nudge 1.6s ease-out .6s 3}
+@keyframes nudge{0%{box-shadow:0 0 0 0 var(--accent-ring)}70%,100%{box-shadow:0 0 0 14px transparent}}
+
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg-opt{display:block;padding:0;border:0;border-radius:14px;background:none;text-align:left;cursor:pointer;touch-action:manipulation}
+.seg-card{display:grid;gap:6px;height:100%;padding:14px;border-radius:14px;border:2px solid var(--line);background:var(--panel);transition:border-color .2s,background-color .2s,transform .12s}
+.seg-card svg{width:24px;height:24px;color:var(--muted)}
+.seg-name{font-weight:700;line-height:1.25}
+.seg-chip{justify-self:start;font:600 12px/1 var(--font-mono);padding:5px 8px;border-radius:999px;background:var(--field);color:var(--muted);transition:background-color .2s,color .2s}
+.seg-opt:hover .seg-card{border-color:var(--muted)}
+.seg-opt:active .seg-card{transform:scale(.98)}
+.seg-opt[aria-pressed="true"] .seg-card{border-color:var(--accent);background:var(--accent-soft)}
+.seg-opt[aria-pressed="true"] .seg-card svg{color:var(--accent)}
+.seg-opt[aria-pressed="true"] .seg-chip{background:var(--accent);color:var(--on-accent)}
+.t-buffer{--c:var(--accent)}
+.slider.buffer{grid-template-columns:minmax(0,1fr) 4.5em}
+
+.t-cheese{--c:var(--cheese)}
+.t-pep{--c:var(--pep)}
+.t-veg{--c:var(--veg)}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--c);flex:none}
+.mixbar{display:flex;gap:2px;height:14px;border-radius:999px;overflow:hidden;background:var(--field)}
+.mixbar span{flex:1 1 0;min-width:0;background:var(--c);transition:flex-grow .3s ease}
+.slider{display:grid;grid-template-columns:9.5em minmax(0,1fr) 3.4em;align-items:center;gap:12px}
+.slider label{display:flex;align-items:center;gap:8px;font-weight:600;min-width:0}
+.slider output{font:600 15px var(--font-mono);text-align:right;font-variant-numeric:tabular-nums}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:30px;margin:0;background:transparent;cursor:pointer;--fill:33%}
+input[type="range"]::-webkit-slider-runnable-track{height:10px;border-radius:999px;background:linear-gradient(90deg,var(--c) var(--fill),var(--track) var(--fill))}
+input[type="range"]::-moz-range-track{height:10px;border-radius:999px;background:linear-gradient(90deg,var(--c) var(--fill),var(--track) var(--fill))}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;margin-top:-8px;border-radius:50%;background:var(--panel);border:4px solid var(--c);box-shadow:0 2px 6px var(--box-shadow)}
+input[type="range"]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--panel);border:4px solid var(--c);box-shadow:0 2px 6px var(--box-shadow)}
+
+/* ---------- output console ---------- */
+.console{grid-area:console;min-width:0;position:sticky;top:calc(env(safe-area-inset-top,0px) + 16px);background:var(--console);color:var(--console-ink);border:1px solid var(--console-line);border-radius:24px;padding:22px;box-shadow:var(--shadow)}
+.bot-row{display:flex;align-items:center;gap:16px}
+.bot{flex:none;width:96px;padding:0;border:0;background:none;cursor:pointer;border-radius:16px}
+.bot svg{display:block;width:100%;height:auto;overflow:visible}
+.bubble{position:relative;flex:1;min-width:0;margin:0;background:var(--bubble);color:var(--bubble-ink);border-radius:16px;padding:12px 16px;font-weight:600;font-size:15px;line-height:1.35;min-height:calc(1.35em * 3 + 24px);display:flex;align-items:center;text-wrap:pretty}
+.bubble::before{content:"";position:absolute;left:-10px;top:50%;translate:0 -50%;border-style:solid;border-width:8px 10px 8px 0;border-color:transparent var(--bubble) transparent transparent}
+.bubble.say{animation:say .35s cubic-bezier(.3,1.6,.6,1)}
+@keyframes say{from{transform:scale(.94);opacity:.5}}
+
+.order-label{margin:0 0 6px;font:600 12px/1 var(--font-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--console-muted)}
+.total{display:flex;align-items:flex-end;justify-content:space-between;gap:10px 16px;flex-wrap:wrap;margin-top:20px;padding-bottom:16px;border-bottom:1px dashed var(--console-line)}
+.total-num{display:flex;align-items:baseline;gap:10px}
+#total{display:inline-block;font:400 clamp(60px,8vw,84px)/.9 var(--font-display);font-variant-numeric:tabular-nums;transform-origin:20% 80%}
+.unit{font:400 20px var(--font-display);color:var(--accent)}
+.feeding{display:grid;gap:2px;text-align:right}
+.feeding strong{font-size:16px}
+.feeding span{font:500 13px var(--font-mono);color:var(--console-muted)}
+
+.stacks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}
+.col{display:grid;justify-items:center;text-align:center;min-width:0}
+.stack-wrap{position:relative;width:100%}
+.stack{--bh:22px;--gap:2px;height:172px;width:100%;display:flex;flex-direction:column-reverse;align-items:center;justify-content:flex-start;gap:var(--gap)}
+.more{position:absolute;top:0;right:4px;font:600 11px/1 var(--font-mono);padding:4px 6px;border-radius:999px;background:var(--console-line);color:var(--console-ink)}
+.box{position:relative;flex:none;height:var(--bh);width:80%;max-width:128px;border-radius:3px;background:linear-gradient(180deg,var(--kraft-hi) 0 24%,var(--kraft) 24% 100%);box-shadow:inset 0 -2px 0 var(--kraft-lo),0 2px 0 var(--box-shadow);translate:var(--jx,0px) 0;transition:height .25s ease}
+.box::after{content:"";position:absolute;right:9%;top:50%;translate:0 -50%;width:16%;height:max(2px,38%);border-radius:2px;background:var(--c)}
+.box.drop{animation:drop .55s cubic-bezier(.25,.9,.35,1.25) both}
+.box.leaving{animation:pop .38s ease-in forwards;pointer-events:none}
+@keyframes drop{0%{transform:translateY(-150px) rotate(-5deg);opacity:0}18%{opacity:1}72%{transform:translateY(3px) rotate(0)}100%{transform:none;opacity:1}}
+@keyframes pop{to{transform:translateY(-70px) rotate(var(--rot,14deg)) scale(.85);opacity:0;height:0}}
+.shelf{width:100%;height:6px;border-radius:3px;background:var(--console-line);margin-top:3px}
+.count{font:400 34px/1 var(--font-display);margin-top:12px;font-variant-numeric:tabular-nums}
+.name{display:flex;align-items:center;justify-content:center;gap:6px;font-weight:700;font-size:15px;margin-top:6px;line-height:1.25;text-wrap:balance}
+.name .dot{width:10px;height:10px}
+.sub{font:500 12px var(--font-mono);color:var(--console-muted);margin-top:2px}
+.bump{animation:bump .45s cubic-bezier(.3,1.8,.5,1)}
+@keyframes bump{35%{transform:scale(1.18)}}
+
+.foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:18px;padding-top:16px;border-top:1px dashed var(--console-line)}
+.spare{font-size:14px;color:var(--console-muted)}
+.btn{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:12px;padding:11px 18px;min-height:44px;background:var(--accent);color:var(--on-accent);font-weight:800;font-size:15px;cursor:pointer;transition:transform .15s}
+.btn svg{width:18px;height:18px}
+.btn:hover{transform:translateY(-1px)}
+.btn:active{transform:translateY(1px)}
+.copy-msg{margin:12px 0 0;font-size:14px;color:var(--console-muted)}
+.fallback{display:block;width:100%;margin-top:8px;min-height:96px;padding:10px 12px;border:0;border-radius:10px;background:var(--bubble);color:var(--bubble-ink);font:13px/1.5 var(--font-mono);resize:vertical}
+
+/* robot */
+.bot-svg .metal{fill:var(--robot-body)}
+.bot-svg .metal-dk{fill:var(--robot-dark)}
+.bot-svg .screen{fill:var(--robot-screen)}
+.bot-svg .eye{fill:var(--robot-eye);transform-box:fill-box;transform-origin:center;animation:blink 4.6s infinite}
+.bot-svg .eyes{transform-box:view-box}
+.bot-svg .eyes-happy path,.bot-svg .mouth,.bot-svg .mouth-happy{fill:none;stroke:var(--robot-eye);stroke-width:3.2;stroke-linecap:round}
+.bot-svg .eyes-happy,.bot-svg .mouth-happy{opacity:0}
+.bot-svg .cheek{fill:var(--robot-cheek);opacity:.55}
+.bot-svg .ant{stroke:var(--robot-dark);stroke-width:3;stroke-linecap:round}
+.bot-svg .bulb{fill:var(--accent);animation:bulb 2.4s ease-in-out infinite}
+.bot-svg .slice{fill:var(--cheese)}
+.bot-svg .crust{fill:var(--kraft)}
+.bot-svg .pepperoni{fill:var(--pep)}
+.bot-svg .tread{fill:var(--robot-screen)}
+.bot-svg .wheel{fill:var(--robot-dark)}
+.bot-svg .bot-all{transform-box:view-box;transform-origin:60px 145px;animation:float 3.2s ease-in-out infinite}
+.bot-svg .arm{transform-box:view-box;transition:transform .4s cubic-bezier(.3,1.6,.5,1)}
+.bot-svg .arm-l{transform-origin:25.5px 92px}
+.bot-svg .arm-r{transform-origin:94.5px 92px}
+.bot.is-thinking .eyes{animation:scan .45s ease-in-out infinite alternate}
+.bot.is-thinking .bulb{animation-duration:.4s}
+.bot.is-happy .bot-all{animation:hop .45s ease 2}
+.bot.is-happy .arm-l{transform:rotate(135deg)}
+.bot.is-happy .arm-r{transform:rotate(-135deg)}
+.bot.is-happy .eyes,.bot.is-happy .mouth{opacity:0}
+.bot.is-happy .eyes-happy,.bot.is-happy .mouth-happy{opacity:1}
+.bot.is-poked .bot-all{animation:wiggle .5s ease}
+@keyframes blink{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+@keyframes scan{from{transform:translateX(-4px)}to{transform:translateX(4px)}}
+@keyframes bulb{50%{opacity:.35}}
+@keyframes float{50%{transform:translateY(-2px)}}
+@keyframes hop{40%{transform:translateY(-9px)}}
+@keyframes wiggle{25%{transform:rotate(-7deg)}75%{transform:rotate(7deg)}}
+
+/* ---------- rules ---------- */
+.rules{grid-area:rules;min-width:0;border:2px dashed var(--line);border-radius:20px;padding:22px}
+.rules h2{font:400 20px/1.2 var(--font-display);margin:0 0 16px}
+.rules ol{list-style:none;margin:0;padding:0;display:grid;gap:18px;counter-reset:rule}
+.rules li{counter-increment:rule;display:grid;grid-template-columns:28px minmax(0,1fr);gap:12px;align-items:start}
+.rules li::before{content:counter(rule);display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--ink);color:var(--panel);font:400 13px/1 var(--font-display)}
+.rule-body{display:grid;gap:4px;min-width:0}
+.rule-text{margin:0;line-height:1.9;max-width:62ch}
+.rule-text .stepper{margin-inline:2px}
+.calc{display:grid;gap:2px;font:500 13.5px/1.55 var(--font-mono);color:var(--muted);overflow-wrap:anywhere}
+.calc-line{display:flex;align-items:center;gap:8px}
+.calc-line i{width:8px;height:8px;border-radius:50%;background:var(--c);flex:none}
+.rules-foot{display:flex;align-items:center;flex-wrap:wrap;gap:10px 16px;margin-top:20px;padding-top:16px;border-top:1px dashed var(--line)}
+.btn-ghost{border:1.5px solid var(--line);background:var(--panel);color:var(--ink);border-radius:10px;padding:8px 14px;min-height:40px;font-weight:700;font-size:14px;cursor:pointer}
+.btn-ghost:hover{border-color:var(--muted)}
+
+/* ---------- mobile dock ---------- */
+.dock{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:20;display:none;align-items:center;gap:14px;padding:10px 12px 10px 16px;border-radius:18px;border:1px solid var(--console-line);background:var(--console);color:var(--console-ink);box-shadow:var(--dock-shadow);cursor:pointer;text-align:left;transform:translateY(160%);transition:transform .35s cubic-bezier(.3,1.3,.5,1)}
+.dock.show{transform:none}
+.dock-total{display:flex;align-items:baseline;gap:6px;white-space:nowrap}
+.dock-total b{font:400 28px/1 var(--font-display);font-variant-numeric:tabular-nums}
+.dock-total span{font-size:13px;font-weight:600;color:var(--console-muted)}
+.dock-chips{display:flex;flex-wrap:wrap;gap:4px 10px;font:600 13px var(--font-mono);min-width:0}
+.chip{display:inline-flex;align-items:center;gap:5px}
+.chip i{width:9px;height:9px;border-radius:50%;background:var(--c)}
+.dock-cta{margin-left:auto;flex:none;padding:9px 12px;border-radius:10px;background:var(--accent);color:var(--on-accent);font-weight:800;font-size:14px}
+
+#confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:30}
+
+@media (max-width:859px){
+  .grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"controls" "console" "rules"}
+  .console{position:static}
+  .dock{display:flex}
+  .wrap{padding-bottom:120px}
+}
+@media (max-width:520px){
+  .section{padding:18px 16px}
+  .console{padding:18px 16px;border-radius:20px}
+  .rules{padding:18px 16px}
+  .bot{width:80px}
+  .bubble{font-size:14px}
+  .stack{height:136px}
+  .count{font-size:28px}
+  .name{font-size:14px}
+  .feeding{text-align:left}
+  .slider{grid-template-columns:minmax(0,1fr) auto;gap:2px 12px}
+  .slider label{grid-column:1;grid-row:1}
+  .slider output{grid-column:2;grid-row:1}
+  .slider input{grid-column:1/-1;grid-row:2}
+  .slider.buffer input{grid-column:1;grid-row:1}
+  .slider.buffer output{grid-column:2;grid-row:1}
+  .dock-chips{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1><span>IER Seminar </span><span class="hl">Pizza</span><span data-i18n="titleTail"> Calculator</span></h1>
+      <p class="tagline" data-i18n="tagline">Enter the RSVP count and P1-ZZA works out the pizza order. The total is always rounded up, so nobody misses out.</p>
+    </div>
+  </header>
+
+  <main class="grid">
+    <section class="controls" aria-label="Inputs">
+      <div class="section">
+        <label class="lbl" for="rsvp" data-i18n="rsvpLabel">RSVPs</label>
+        <div class="stepper big" id="rsvp-stepper">
+          <button type="button" data-for="rsvp" data-dir="-1" data-i18n-aria="minus" aria-label="Decrease">−</button>
+          <input id="rsvp" type="number" inputmode="numeric" min="0" max="999" step="1" value="40">
+          <button type="button" data-for="rsvp" data-dir="1" data-i18n-aria="plus" aria-label="Increase">+</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <p class="lbl" id="buffer-lbl" data-i18n="bufferLabel">Buffer: extra people to order for</p>
+        <div class="seg" role="group" aria-labelledby="buffer-lbl">
+          <button type="button" class="seg-opt" data-preset="internal" aria-pressed="true">
+            <span class="seg-card">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V9l8-5 8 5v11"/><path d="M9.5 20v-5.5h5V20"/><path d="M2.5 20h19"/></svg>
+              <span class="seg-name" data-i18n="internal">IER / internal</span>
+              <span class="seg-chip" id="chip-internal">+15 extra</span>
+            </span>
+          </button>
+          <button type="button" class="seg-opt" data-preset="external" aria-pressed="false">
+            <span class="seg-card">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.5 2.5 10.5 13.5"/><path d="M21.5 2.5 14.5 21.5l-4-8-8-4z"/></svg>
+              <span class="seg-name" data-i18n="external">External speaker</span>
+              <span class="seg-chip" id="chip-external">+20 extra</span>
+            </span>
+          </button>
+        </div>
+        <div class="slider buffer t-buffer">
+          <input type="range" id="buffer" min="0" max="40" step="1" value="15" aria-labelledby="buffer-lbl">
+          <output id="out-buffer" for="buffer">+15</output>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="row-head">
+          <p class="lbl" data-i18n="mixLabel">Pizza mix</p>
+          <div class="link-row">
+            <button type="button" class="link-btn" id="mix-even" data-i18n="mixEven">Even split</button>
+            <button type="button" class="link-btn" id="mix-default" data-i18n="mixReset">Default mix</button>
+          </div>
+        </div>
+        <div class="mixbar" aria-hidden="true">
+          <span class="t-cheese" id="bar-cheese"></span><span class="t-pep" id="bar-pep"></span><span class="t-veg" id="bar-veg"></span>
+        </div>
+        <div class="slider t-cheese">
+          <label for="pct-cheese"><i class="dot"></i><span data-i18n="cheese">Cheese</span></label>
+          <input type="range" id="pct-cheese" min="0" max="100" step="1" value="40">
+          <output id="out-cheese" for="pct-cheese">40%</output>
+        </div>
+        <div class="slider t-pep">
+          <label for="pct-pep"><i class="dot"></i><span data-i18n="pep">Pepperoni</span></label>
+          <input type="range" id="pct-pep" min="0" max="100" step="1" value="30">
+          <output id="out-pep" for="pct-pep">30%</output>
+        </div>
+        <div class="slider t-veg">
+          <label for="pct-veg"><i class="dot"></i><span data-i18n="veg">Veggie</span></label>
+          <input type="range" id="pct-veg" min="0" max="100" step="1" value="30">
+          <output id="out-veg" for="pct-veg">30%</output>
+        </div>
+      </div>
+    </section>
+
+    <section class="console" id="results" aria-labelledby="order-lbl">
+      <div class="bot-row">
+        <button type="button" class="bot" id="bot" data-i18n-aria="botAria" aria-label="Poke P1-ZZA">
+          <svg class="bot-svg" viewBox="-10 0 140 150" aria-hidden="true">
+            <g class="bot-all">
+              <line class="ant" x1="60" y1="24" x2="60" y2="12"/>
+              <circle class="bulb" cx="60" cy="8" r="5.5"/>
+              <rect class="metal-dk" x="12" y="40" width="10" height="22" rx="4"/>
+              <rect class="metal-dk" x="98" y="40" width="10" height="22" rx="4"/>
+              <g class="arm arm-l">
+                <rect class="metal" x="20" y="90" width="11" height="30" rx="5.5"/>
+                <circle class="metal-dk" cx="25.5" cy="122" r="6.5"/>
+              </g>
+              <g class="arm arm-r">
+                <rect class="metal" x="89" y="90" width="11" height="30" rx="5.5"/>
+                <circle class="metal-dk" cx="94.5" cy="122" r="6.5"/>
+              </g>
+              <rect class="metal-dk" x="52" y="78" width="16" height="10" rx="2"/>
+              <rect class="metal" x="30" y="86" width="60" height="42" rx="12"/>
+              <path class="slice" d="M60 94 72.5 117H47.5Z"/>
+              <rect class="crust" x="45.5" y="115" width="29" height="6" rx="3"/>
+              <circle class="pepperoni" cx="60" cy="104.5" r="2.6"/>
+              <circle class="pepperoni" cx="55.5" cy="111.5" r="2.2"/>
+              <circle class="pepperoni" cx="64.5" cy="111.5" r="2.2"/>
+              <rect class="metal" x="20" y="22" width="80" height="58" rx="18"/>
+              <rect class="screen" x="28" y="30" width="64" height="42" rx="12"/>
+              <g class="eyes">
+                <rect class="eye" x="42" y="42" width="10" height="15" rx="5"/>
+                <rect class="eye" x="68" y="42" width="10" height="15" rx="5"/>
+              </g>
+              <g class="eyes-happy">
+                <path d="M41 53q6-9 12 0"/>
+                <path d="M67 53q6-9 12 0"/>
+              </g>
+              <path class="mouth" d="M54 63q6 4 12 0"/>
+              <path class="mouth-happy" d="M51 61q9 9 18 0"/>
+              <circle class="cheek" cx="36" cy="63" r="3"/>
+              <circle class="cheek" cx="84" cy="63" r="3"/>
+              <rect class="tread" x="34" y="130" width="52" height="15" rx="7.5"/>
+              <circle class="wheel" cx="45" cy="137.5" r="3.2"/>
+              <circle class="wheel" cx="60" cy="137.5" r="3.2"/>
+              <circle class="wheel" cx="75" cy="137.5" r="3.2"/>
+            </g>
+          </svg>
+        </button>
+        <p class="bubble" id="bubble"></p>
+      </div>
+
+      <div class="total">
+        <div>
+          <p class="order-label" id="order-lbl" data-i18n="orderLabel">The order</p>
+          <div class="total-num"><span id="total">0</span><span class="unit" id="unit">pizzas</span></div>
+        </div>
+        <div class="feeding"><strong id="feeding"></strong><span id="breakdown"></span></div>
+      </div>
+
+      <div class="stacks">
+        <div class="col t-cheese">
+          <div class="stack-wrap"><span class="more" id="more-cheese" hidden></span><div class="stack" id="stack-cheese"></div></div>
+          <div class="shelf"></div>
+          <div class="count" id="n-cheese">0</div>
+          <div class="name"><i class="dot"></i><span data-i18n="cheese">Cheese</span></div>
+          <div class="sub" id="sub-cheese"></div>
+        </div>
+        <div class="col t-pep">
+          <div class="stack-wrap"><span class="more" id="more-pep" hidden></span><div class="stack" id="stack-pep"></div></div>
+          <div class="shelf"></div>
+          <div class="count" id="n-pep">0</div>
+          <div class="name"><i class="dot"></i><span data-i18n="pep">Pepperoni</span></div>
+          <div class="sub" id="sub-pep"></div>
+        </div>
+        <div class="col t-veg">
+          <div class="stack-wrap"><span class="more" id="more-veg" hidden></span><div class="stack" id="stack-veg"></div></div>
+          <div class="shelf"></div>
+          <div class="count" id="n-veg">0</div>
+          <div class="name"><i class="dot"></i><span data-i18n="veg">Veggie</span></div>
+          <div class="sub" id="sub-veg"></div>
+        </div>
+      </div>
+
+      <div class="foot">
+        <span class="spare" id="spare"></span>
+        <button type="button" class="btn" id="copy">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="13" height="13" rx="2.5"/><path d="M16 8V5.5A2.5 2.5 0 0 0 13.5 3h-8A2.5 2.5 0 0 0 3 5.5v8A2.5 2.5 0 0 0 5.5 16H8"/></svg>
+          <span id="copy-txt" data-i18n="copy">Copy order</span>
+        </button>
+      </div>
+      <p class="copy-msg" id="copy-msg" hidden></p>
+      <textarea class="fallback" id="copy-fallback" readonly hidden aria-label="Order text"></textarea>
+    </section>
+
+    <section class="rules" aria-labelledby="rules-h">
+      <h2 id="rules-h" data-i18n="rulesTitle">How P1-ZZA counts</h2>
+      <ol>
+        <li>
+          <div class="rule-body">
+            <p class="rule-text" data-i18n="r1"></p>
+            <span class="calc" id="calc-1"></span>
+          </div>
+        </li>
+        <li>
+          <div class="rule-body">
+            <p class="rule-text">
+              <span data-i18n="r2a"></span>
+              <span class="stepper sm">
+                <button type="button" data-for="spp" data-dir="-1" data-i18n-aria="minus" aria-label="Decrease">−</button>
+                <input id="spp" type="number" inputmode="decimal" min="0.5" max="10" step="0.25" value="2.25" data-i18n-aria="sppAria" aria-label="Slices per person">
+                <button type="button" data-for="spp" data-dir="1" data-i18n-aria="plus" aria-label="Increase">+</button>
+              </span>
+              <span data-i18n="r2b"></span>
+            </p>
+            <p class="hint" data-i18n="r2hint"></p>
+            <span class="calc" id="calc-2"></span>
+          </div>
+        </li>
+        <li>
+          <div class="rule-body">
+            <p class="rule-text">
+              <span data-i18n="r3a"></span>
+              <span class="stepper sm">
+                <button type="button" data-for="spz" data-dir="-1" data-i18n-aria="minus" aria-label="Decrease">−</button>
+                <input id="spz" type="number" inputmode="numeric" min="1" max="24" step="1" value="8" data-i18n-aria="spzAria" aria-label="Slices per pizza">
+                <button type="button" data-for="spz" data-dir="1" data-i18n-aria="plus" aria-label="Increase">+</button>
+              </span>
+              <span data-i18n="r3b"></span>
+            </p>
+            <div class="calc" id="calc-3"></div>
+          </div>
+        </li>
+        <li>
+          <div class="rule-body">
+            <p class="rule-text" data-i18n="r4"></p>
+            <span class="calc" id="calc-4"></span>
+          </div>
+        </li>
+      </ol>
+      <div class="rules-foot">
+        <button type="button" class="btn-ghost" id="reset" data-i18n="resetRules">Restore default settings</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<button type="button" class="dock" id="dock" aria-hidden="true" tabindex="-1">
+  <span class="dock-total"><b id="dock-total">0</b><span id="dock-unit">pizzas</span></span>
+  <span class="dock-chips">
+    <span class="chip t-cheese"><i></i><span id="dock-cheese">0</span></span>
+    <span class="chip t-pep"><i></i><span id="dock-pep">0</span></span>
+    <span class="chip t-veg"><i></i><span id="dock-veg">0</span></span>
+  </span>
+  <span class="dock-cta"><span data-i18n="dockCta">See order</span> ↓</span>
+</button>
+<canvas id="confetti" aria-hidden="true"></canvas>
+<div class="sr-only" aria-live="polite" id="live"></div>
+
+<script>
+(function () {
+  'use strict';
+  const $ = s => document.querySelector(s);
+  const $$ = s => Array.from(document.querySelectorAll(s));
+
+  const TYPES = ['cheese', 'pep', 'veg'];
+  const DEFAULTS = { rsvp: 40, buffer: 15, spp: 2.25, spz: 8, pct: { cheese: 40, pep: 40, veg: 20 } };
+  const PRESETS = { internal: 15, external: 20 };
+  const BUF = { key: 'buffer', min: 0, max: 40, step: 1, int: true };
+  const NUM = {
+    'rsvp':    { key: 'rsvp',   min: 0,   max: 999, step: 1,   int: true },
+    'spp':     { key: 'spp',    min: 0.5, max: 10,  step: 0.25, int: false },
+    'spz':     { key: 'spz',    min: 1,   max: 24,  step: 1,   int: true }
+  };
+  const KEY = 'ier-seminar-pizza-v2';
+  const CAP = 24;
+  const motionQ = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+  const calm = () => motionQ.matches;
+  const clone = o => JSON.parse(JSON.stringify(o));
+  const clampNum = (v, m) => { v = Math.min(m.max, Math.max(m.min, v)); return m.int ? Math.round(v) : Math.round(v * 100) / 100; };
+  const fmt = x => String(Math.round(x * 100) / 100);
+  const fmtRaw = x => Math.abs(x - Math.round(x)) < 1e-9 ? String(Math.round(x)) : x.toFixed(2);
+  const spareOf = r => Math.max(0, Math.floor(r.spare + 1e-9));
+  const pz = n => n === 1 ? 'pizza' : 'pizzas';
+
+  const T = {
+    titleTail: ' Calculator',
+    tagline: 'Enter the RSVP count and P1-ZZA works out the pizza order. The total is always rounded up, so nobody misses out.',
+    rsvpLabel: 'RSVPs',
+    bufferLabel: 'Buffer: extra people to order for',
+    internal: 'IER / internal',
+    external: 'External speaker',
+    bufOut: n => `+${n}`,
+    mixLabel: 'Pizza mix',
+    mixEven: 'Even split',
+    mixReset: 'Default mix',
+    cheese: 'Cheese', pep: 'Pepperoni', veg: 'Veggie',
+    short: { cheese: 'Cheese', pep: 'Pepperoni', veg: 'Veggie' },
+    orderLabel: 'The order',
+    copy: 'Copy order',
+    copied: 'Copied',
+    copyFail: 'Your browser blocked copying. The order text is selected below, so you can copy it from there.',
+    rulesTitle: 'How P1-ZZA counts',
+    r1: 'People to feed = RSVPs + buffer. A buffer of 10–20 is usually right; go higher for external speakers, who tend to draw a bigger crowd.',
+    r2a: 'Slices needed = people ×', r2b: 'slices per person.',
+    r2hint: 'Default 2.25 slices ≈ 0.28 pizza per person, based on past IER seminar orders.',
+    r3a: 'Pizzas to order = slices needed ÷', r3b: 'slices per pizza, rounded up.',
+    r4: 'Split the pizzas by the mix, one at a time: each goes to the flavor furthest below its share, and ties go to Cheese first, then Pepperoni. One more person never adds more than one pizza.',
+    resetRules: 'Restore default settings',
+    dockCta: 'See order',
+    minus: 'Decrease', plus: 'Increase',
+    sppAria: 'Slices per person', spzAria: 'Slices per pizza',
+    botAria: 'Poke P1-ZZA',
+    extra: n => `+${n} extra`,
+    unit: n => pz(n),
+    feeding: p => `Ordering for ${p} ${p === 1 ? 'person' : 'people'}`,
+    breakdown: (rsvp, buf) => `${rsvp} RSVP + ${buf} extra`,
+    sub: (s, pct) => `${s} slices · ${pct}%`,
+    spare: n => n > 0 ? `About ${n} spare ${n === 1 ? 'slice' : 'slices'}` : 'No spare slices',
+    calc1: (rsvp, buf, p) => `${rsvp} + ${buf} = ${p} people`,
+    calc2: (p, spp, s) => `${p} × ${spp} = ${s} slices`,
+    calc3: (s, spz, raw, total) => `⌈${s} ÷ ${spz}⌉ = ⌈${raw}⌉ = ${total} ${pz(total)}`,
+    calcFlavor: (name, total, pct, exact, n) => `${name}: ${total} × ${pct}% = ${exact} → ${n}`,
+    order: (r, s) => `IER Seminar pizza order: ${r.total} ${pz(r.total)} (Cheese ${r.per.cheese.n}, Pepperoni ${r.per.pep.n}, Veggie ${r.per.veg.n}). For ${r.people} people: ${s.rsvp} RSVPs + ${r.buffer} extra. ${fmt(s.spp)} slices per person, ${s.spz} slices per pizza.`,
+    live: r => `${r.total} ${pz(r.total)}: Cheese ${r.per.cheese.n}, Pepperoni ${r.per.pep.n}, Veggie ${r.per.veg.n}, for ${r.people} people.`,
+    hello: "Hi, I'm P1-ZZA. Give me the RSVP count and I'll handle the carbs.",
+    think: ['Crunching numbers…', 'Counting slices…', 'Calibrating cheese sensors…', 'Stacking boxes…'],
+    done: r => r.total === 0 ? "Zero people? I'll power down, then." : [
+      `${r.total} ${pz(r.total)}. Nobody leaves hungry.`,
+      `Order up! ${r.total} ${pz(r.total)}, about ${spareOf(r)} spare slices.`,
+      `${r.total} ${r.total === 1 ? 'box' : 'boxes'} stacked and ready. Beep boop.`
+    ],
+    poke: ['Beep! Pineapple is not in my database.', 'I run on pepperoni. Metaphorically.', "Robots don't eat pizza. More for you.", 'Rounding up is my love language.']
+  };
+
+  /* ---------- state ---------- */
+  function normalizePct(raw) {
+    const sum = raw.reduce((a, b) => a + b, 0);
+    if (sum <= 0) return clone(DEFAULTS.pct);
+    const exact = raw.map(v => v * 100 / sum);
+    const fl = exact.map(Math.floor);
+    const left = 100 - fl.reduce((a, b) => a + b, 0);
+    exact.map((v, i) => [v - fl[i], i]).sort((a, b) => b[0] - a[0]).slice(0, left).forEach(([, i]) => { fl[i]++; });
+    return { cheese: fl[0], pep: fl[1], veg: fl[2] };
+  }
+  function sanitize(s) {
+    const o = clone(DEFAULTS);
+    Object.keys(NUM).forEach(id => { const m = NUM[id]; const v = Number(s[m.key]); if (s[m.key] !== undefined && Number.isFinite(v)) o[m.key] = clampNum(v, m); });
+    const b = Number(s.buffer);
+    if (s.buffer !== undefined && Number.isFinite(b)) o.buffer = clampNum(b, BUF);
+    if (s.pct && typeof s.pct === 'object') o.pct = normalizePct(TYPES.map(k => Math.max(0, Number(s.pct[k]) || 0)));
+    return o;
+  }
+
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { saved = null; }
+  const firstVisit = !saved || typeof saved !== 'object';
+  let state = sanitize(firstVisit ? {} : saved);
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+  function compute(s) {
+    const buffer = s.buffer;
+    const people = s.rsvp + buffer;
+    const slices = people * s.spp;
+    const raw = slices / s.spz;
+    const total = Math.max(0, Math.ceil(raw - 1e-9));
+    // Hand out pizzas one at a time to the flavor furthest below its share (ties: cheese, then pepperoni),
+    // so one more pizza only ever adds one box to one flavor.
+    const n = { cheese: 0, pep: 0, veg: 0 };
+    for (let k = 1; k <= total; k++) {
+      let best = TYPES[0], bd = -Infinity;
+      TYPES.forEach(t => { const d = k * s.pct[t] - 100 * n[t]; if (d > bd) { bd = d; best = t; } });
+      n[best]++;
+    }
+    const per = {};
+    TYPES.forEach(k => { per[k] = { exact: total * s.pct[k] / 100, n: n[k] }; });
+    return { buffer, people, slices, raw, per, total, spare: total * s.spz - slices };
+  }
+
+  function setPct(k, v) {
+    v = Math.max(0, Math.min(100, Math.round(v)));
+    const [a, b] = TYPES.filter(x => x !== k);
+    const rem = 100 - v, pa = state.pct[a], pb = state.pct[b];
+    let na = pa + pb > 0 ? Math.round(rem * pa / (pa + pb)) : Math.ceil(rem / 2);
+    na = Math.max(0, Math.min(rem, na));
+    state.pct = Object.assign({}, state.pct, { [k]: v, [a]: na, [b]: rem - na });
+  }
+
+  /* ---------- robot + bubble ---------- */
+  const bot = $('#bot');
+  const bubble = $('#bubble');
+  const lastPick = {};
+  function pick(list, tag) {
+    if (!Array.isArray(list)) return list;
+    if (list.length < 2) return list[0];
+    let i;
+    do { i = Math.floor(Math.random() * list.length); } while (i === lastPick[tag]);
+    lastPick[tag] = i;
+    return list[i];
+  }
+  function say(text) {
+    if (bubble.textContent === text) return;
+    bubble.textContent = text;
+    if (calm()) return;
+    bubble.classList.remove('say'); void bubble.offsetWidth; bubble.classList.add('say');
+  }
+  function setBot(s) {
+    bot.classList.toggle('is-thinking', s === 'thinking');
+    bot.classList.toggle('is-happy', s === 'happy');
+  }
+  function bump(el) {
+    if (calm()) return;
+    el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
+  }
+
+  /* ---------- total counter ---------- */
+  const totalEl = $('#total');
+  let shownTotal = 0, targetTotal = null, tweenRaf = 0;
+  function setTotal(n, dur) {
+    if (n === targetTotal) return;
+    targetTotal = n;
+    cancelAnimationFrame(tweenRaf);
+    if (calm()) { shownTotal = n; totalEl.textContent = n; return; }
+    const from = shownTotal, start = performance.now();
+    const step = now => {
+      const k = Math.min(1, (now - start) / dur);
+      shownTotal = Math.round(from + (n - from) * (1 - Math.pow(1 - k, 3)));
+      totalEl.textContent = shownTotal;
+      if (k < 1) tweenRaf = requestAnimationFrame(step);
+    };
+    tweenRaf = requestAnimationFrame(step);
+  }
+
+  /* ---------- box stacks ---------- */
+  const stacks = {};
+  TYPES.forEach((k, i) => { stacks[k] = { el: $('#stack-' + k), alive: [], idx: i }; });
+  function layoutStack(k) {
+    const st = stacks[k], show = st.alive.length;
+    const maxH = st.el.clientHeight || 160;
+    const gap = show > 14 ? 1 : 2;
+    const bh = show ? Math.max(3, Math.min(22, (maxH - (show - 1) * gap) / show)) : 22;
+    st.el.style.setProperty('--bh', bh.toFixed(2) + 'px');
+    st.el.style.setProperty('--gap', gap + 'px');
+  }
+  function setStack(k, n, baseDelay) {
+    const st = stacks[k], show = Math.min(n, CAP);
+    let added = 0;
+    while (st.alive.length < show) {
+      const b = document.createElement('div');
+      const i = st.alive.length;
+      b.className = 'box';
+      b.style.setProperty('--jx', (((i * 37 + st.idx * 13) % 7) - 3) + 'px');
+      if (!calm()) { b.classList.add('drop'); b.style.animationDelay = (baseDelay + Math.min(added * 45, 700)) + 'ms'; }
+      st.el.insertBefore(b, st.el.querySelector('.leaving'));
+      st.alive.push(b);
+      added++;
+    }
+    while (st.alive.length > show) {
+      const b = st.alive.pop();
+      if (calm()) { b.remove(); continue; }
+      b.classList.remove('drop');
+      b.style.animationDelay = '0ms';
+      b.style.setProperty('--rot', (Math.random() * 30 - 15).toFixed(1) + 'deg');
+      b.classList.add('leaving');
+      setTimeout(() => b.remove(), 420);
+    }
+    layoutStack(k);
+    const more = $('#more-' + k);
+    more.hidden = n <= CAP;
+    more.textContent = '+' + (n - CAP);
+  }
+
+  /* ---------- confetti ---------- */
+  const cv = $('#confetti');
+  const cx = cv.getContext('2d');
+  let parts = [], raf = 0, W = 0, H = 0, pal = {};
+  function fit() {
+    const d = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    cv.width = Math.round(W * d); cv.height = Math.round(H * d);
+    cx.setTransform(d, 0, 0, d, 0, 0);
+  }
+  function origin() {
+    const r = totalEl.getBoundingClientRect();
+    if (r.bottom > 0 && r.top < window.innerHeight) return [r.left + r.width / 2, r.top + r.height / 2];
+    const dock = $('#dock');
+    if (dock.classList.contains('show')) { const q = dock.getBoundingClientRect(); return [q.left + 48, q.top + 8]; }
+    return [window.innerWidth / 2, window.innerHeight * 0.55];
+  }
+  function burst(count, x, y, nutsOnly) {
+    if (calm() || !cx) return;
+    if (x === undefined) { const o = origin(); x = o[0]; y = o[1]; }
+    if (!raf) fit();
+    const cs = getComputedStyle(document.documentElement);
+    const v = n => cs.getPropertyValue(n).trim();
+    pal = { cheese: v('--cheese'), pep: v('--pep'), veg: v('--veg'), accent: v('--accent'), kraft: v('--kraft'), metal: v('--robot-body') };
+    const chips = [pal.cheese, pal.pep, pal.veg, pal.accent];
+    for (let i = 0; i < count; i++) {
+      const a = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.15;
+      const sp = 5 + Math.random() * 8;
+      const kind = nutsOnly ? 'nut' : (i % 5 === 0 ? 'slice' : i % 5 === 1 ? 'nut' : 'chip');
+      parts.push({
+        x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+        r: Math.random() * 6.28, vr: (Math.random() - 0.5) * 0.35,
+        s: kind === 'slice' ? 9 + Math.random() * 5 : 3.5 + Math.random() * 3.5,
+        kind, c: chips[i % chips.length], life: 0, max: 70 + Math.random() * 50
+      });
+    }
+    if (!raf) raf = requestAnimationFrame(tick);
+  }
+  function drawPart(p) {
+    const s = p.s;
+    if (p.kind === 'slice') {
+      cx.fillStyle = pal.cheese;
+      cx.beginPath(); cx.moveTo(0, -s); cx.lineTo(s * 0.62, s * 0.6); cx.lineTo(-s * 0.62, s * 0.6); cx.closePath(); cx.fill();
+      cx.fillStyle = pal.kraft;
+      cx.fillRect(-s * 0.7, s * 0.5, s * 1.4, s * 0.3);
+      cx.fillStyle = pal.pep;
+      [[0, -0.15, 0.17], [-0.23, 0.28, 0.13], [0.22, 0.26, 0.13]].forEach(d => { cx.beginPath(); cx.arc(d[0] * s, d[1] * s, d[2] * s, 0, Math.PI * 2); cx.fill(); });
+    } else if (p.kind === 'nut') {
+      cx.fillStyle = pal.metal;
+      cx.beginPath();
+      for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3; if (i) cx.lineTo(Math.cos(a) * s, Math.sin(a) * s); else cx.moveTo(Math.cos(a) * s, Math.sin(a) * s); }
+      cx.closePath();
+      cx.moveTo(s * 0.45, 0); cx.arc(0, 0, s * 0.45, 0, Math.PI * 2, true);
+      cx.fill('evenodd');
+    } else {
+      cx.fillStyle = p.c;
+      cx.fillRect(-s, -s * 0.4, s * 2, s * 0.8);
+    }
+  }
+  function tick() {
+    cx.clearRect(0, 0, W, H);
+    parts = parts.filter(p => p.life < p.max && p.y < H + 60);
+    parts.forEach(p => {
+      p.vy += 0.3; p.vx *= 0.985; p.x += p.vx; p.y += p.vy; p.r += p.vr; p.life++;
+      cx.save();
+      cx.globalAlpha = Math.max(0, Math.min(1, (p.max - p.life) / 20));
+      cx.translate(p.x, p.y); cx.rotate(p.r);
+      drawPart(p);
+      cx.restore();
+    });
+    raf = parts.length ? requestAnimationFrame(tick) : 0;
+    if (!raf) cx.clearRect(0, 0, W, H);
+  }
+
+  /* ---------- render ---------- */
+  const prevN = {};
+  function render(changed, baseDelay) {
+    const t = T;
+    const r = compute(state);
+
+    Object.keys(NUM).forEach(id => {
+      const el = document.getElementById(id), m = NUM[id];
+      if (document.activeElement !== el) el.value = state[m.key];
+      $$('button[data-for="' + id + '"]').forEach(b => {
+        const atEdge = Number(b.dataset.dir) < 0 ? state[m.key] <= m.min : state[m.key] >= m.max;
+        b.setAttribute('aria-disabled', String(atEdge));
+      });
+    });
+    $$('.seg-opt').forEach(b => {
+      const v = PRESETS[b.dataset.preset];
+      b.setAttribute('aria-pressed', String(state.buffer === v));
+      $('#chip-' + b.dataset.preset).textContent = t.extra(v);
+    });
+    const bs = $('#buffer');
+    if (Number(bs.value) !== state.buffer) bs.value = state.buffer;
+    bs.style.setProperty('--fill', (state.buffer - BUF.min) / (BUF.max - BUF.min) * 100 + '%');
+    bs.setAttribute('aria-valuetext', t.bufOut(state.buffer));
+    $('#out-buffer').textContent = t.bufOut(state.buffer);
+
+    TYPES.forEach(k => {
+      const v = state.pct[k], sl = $('#pct-' + k);
+      if (Number(sl.value) !== v) sl.value = v;
+      sl.style.setProperty('--fill', v + '%');
+      sl.setAttribute('aria-valuetext', v + '%');
+      $('#out-' + k).textContent = v + '%';
+      $('#bar-' + k).style.flexGrow = v;
+    });
+
+    setTotal(r.total, baseDelay ? 1000 : 420);
+    $('#unit').textContent = t.unit(r.total);
+    $('#feeding').textContent = t.feeding(r.people);
+    $('#breakdown').textContent = t.breakdown(state.rsvp, r.buffer);
+    TYPES.forEach((k, i) => {
+      const n = r.per[k].n, c = $('#n-' + k);
+      c.textContent = n;
+      if (prevN[k] !== undefined && prevN[k] !== n) bump(c);
+      prevN[k] = n;
+      $('#sub-' + k).textContent = t.sub(n * state.spz, state.pct[k]);
+      setStack(k, n, baseDelay ? baseDelay + i * 140 : 0);
+      $('#dock-' + k).textContent = n;
+    });
+    $('#spare').textContent = t.spare(spareOf(r));
+    $('#dock-total').textContent = r.total;
+    $('#dock-unit').textContent = t.unit(r.total);
+
+    $('#calc-1').textContent = '→ ' + t.calc1(state.rsvp, r.buffer, r.people);
+    $('#calc-2').textContent = '→ ' + t.calc2(r.people, fmt(state.spp), fmt(r.slices));
+    $('#calc-3').textContent = '→ ' + t.calc3(fmt(r.slices), state.spz, fmtRaw(r.raw), r.total);
+    const c4 = $('#calc-4');
+    c4.textContent = '';
+    TYPES.forEach(k => {
+      const line = document.createElement('span');
+      line.className = 'calc-line t-' + k;
+      line.appendChild(document.createElement('i'));
+      line.appendChild(document.createTextNode(t.calcFlavor(t.short[k], r.total, state.pct[k], fmt(r.per[k].exact), r.per[k].n)));
+      c4.appendChild(line);
+    });
+
+    if (changed) onChanged();
+  }
+
+  let settleT = 0, idleT = 0, lastTotal = null, hasSettled = false;
+  function onChanged() {
+    clearTimeout(idleT);
+    setBot('thinking');
+    say(pick(T.think, 'think'));
+    clearTimeout(settleT);
+    settleT = setTimeout(settle, 700);
+  }
+  function settle() {
+    const t = T, r = compute(state);
+    hasSettled = true;
+    setBot('happy');
+    say(pick(t.done(r), 'done'));
+    $('#live').textContent = t.live(r);
+    if (r.total > 0) { bump(totalEl); burst(r.total !== lastTotal ? 72 : 26); }
+    lastTotal = r.total;
+    clearTimeout(idleT);
+    idleT = setTimeout(() => setBot('idle'), 2400);
+  }
+  function commit() {
+    $('#copy-fallback').hidden = true;
+    $('#copy-msg').hidden = true;
+    save();
+    render(true);
+  }
+
+  function applyText() {
+    const t = T;
+    document.documentElement.lang = 'en';
+    $$('[data-i18n]').forEach(el => { const v = t[el.dataset.i18n]; if (typeof v === 'string') el.textContent = v; });
+    $$('[data-i18n-aria]').forEach(el => { const v = t[el.dataset.i18nAria]; if (typeof v === 'string') el.setAttribute('aria-label', v); });
+  }
+
+  /* ---------- events ---------- */
+  const rsvpStepper = $('#rsvp-stepper');
+  const nudgeOff = () => rsvpStepper.classList.remove('nudge');
+
+  Object.keys(NUM).forEach(id => {
+    const el = document.getElementById(id), m = NUM[id];
+    el.addEventListener('input', () => {
+      if (id === 'rsvp') nudgeOff();
+      const raw = el.value.trim();
+      const v = raw === '' ? m.min : Number(raw);
+      if (!Number.isFinite(v)) return;
+      const nv = clampNum(v, m);
+      if (nv === state[m.key]) return;
+      state[m.key] = nv;
+      commit();
+    });
+    el.addEventListener('blur', () => { el.value = state[m.key]; });
+    el.addEventListener('focus', () => { try { el.select(); } catch (e) {} });
+  });
+
+  document.addEventListener('click', e => {
+    const b = e.target.closest('button[data-for]');
+    if (!b) return;
+    const id = b.dataset.for, m = NUM[id];
+    const nv = clampNum(state[m.key] + Number(b.dataset.dir) * m.step, m);
+    if (id === 'rsvp') nudgeOff();
+    if (nv === state[m.key]) return;
+    state[m.key] = nv;
+    document.getElementById(id).value = nv;
+    commit();
+  });
+
+  $$('.seg-opt').forEach(b => b.addEventListener('click', () => {
+    const v = PRESETS[b.dataset.preset];
+    if (state.buffer === v) return;
+    state.buffer = v;
+    commit();
+  }));
+  $('#buffer').addEventListener('input', e => {
+    state.buffer = clampNum(Number(e.target.value), BUF);
+    commit();
+  });
+
+  TYPES.forEach(k => $('#pct-' + k).addEventListener('input', e => { setPct(k, Number(e.target.value)); commit(); }));
+  $('#mix-even').addEventListener('click', () => { state.pct = { cheese: 34, pep: 33, veg: 33 }; commit(); });
+  $('#mix-default').addEventListener('click', () => { state.pct = clone(DEFAULTS.pct); commit(); });
+
+  $('#reset').addEventListener('click', () => {
+    state = Object.assign(clone(DEFAULTS), { rsvp: state.rsvp, buffer: state.buffer });
+    commit();
+  });
+
+
+  let copyT = 0;
+  $('#copy').addEventListener('click', () => {
+    const t = T;
+    const text = t.order(compute(state), state);
+    const fb = $('#copy-fallback'), msg = $('#copy-msg'), lbl = $('#copy-txt');
+    const ok = () => {
+      fb.hidden = true; msg.hidden = true;
+      lbl.textContent = t.copied;
+      clearTimeout(copyT);
+      copyT = setTimeout(() => { lbl.textContent = T.copy; }, 1800);
+      const q = $('#copy').getBoundingClientRect();
+      burst(18, q.left + q.width / 2, q.top);
+    };
+    const fail = () => {
+      fb.value = text; fb.hidden = false;
+      msg.textContent = t.copyFail; msg.hidden = false;
+      fb.focus(); fb.select();
+    };
+    try { navigator.clipboard.writeText(text).then(ok, fail); } catch (e) { fail(); }
+  });
+
+  let pokeT = 0;
+  bot.addEventListener('click', () => {
+    say(pick(T.poke, 'poke'));
+    if (calm()) return;
+    bot.classList.remove('is-poked'); void bot.offsetWidth; bot.classList.add('is-poked');
+    clearTimeout(pokeT);
+    pokeT = setTimeout(() => bot.classList.remove('is-poked'), 550);
+    const q = bot.getBoundingClientRect();
+    burst(12, q.left + q.width / 2, q.top + q.height * 0.3, true);
+  });
+
+  const dock = $('#dock');
+  dock.addEventListener('click', () => $('#results').scrollIntoView({ behavior: calm() ? 'auto' : 'smooth', block: 'start' }));
+  function setDock(show) {
+    dock.classList.toggle('show', show);
+    dock.setAttribute('aria-hidden', String(!show));
+    dock.tabIndex = show ? 0 : -1;
+    if ('inert' in dock) dock.inert = !show;
+  }
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(entries => setDock(!entries[0].isIntersecting), { threshold: 0.15 }).observe($('#results'));
+  }
+
+  let rzT = 0;
+  window.addEventListener('resize', () => {
+    clearTimeout(rzT);
+    rzT = setTimeout(() => { TYPES.forEach(layoutStack); if (raf) fit(); }, 150);
+  });
+
+  /* ---------- boot ---------- */
+  applyText();
+  if (firstVisit) rsvpStepper.classList.add('nudge');
+  render(false, 250);
+  lastTotal = compute(state).total;
+  say(T.hello);
+})();
+</script>
+</body>
+</html>
